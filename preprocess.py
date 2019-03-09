@@ -53,9 +53,9 @@ for i in files:
         print('resampled')
         
         freq, time, Sxx = sig.spectrogram(data_resampled, sr,mode='magnitude')
-        plt.pcolormesh(time, freq, 10*np.log10(Sxx))
-        plt.ylabel('Frequency [Hz]')
-        plt.xlabel('Time [sec]')
+        #plt.pcolormesh(time, freq, 10*np.log10(Sxx))
+        #plt.ylabel('Frequency [Hz]')
+        #plt.xlabel('Time [sec]')
 
         #norm_Sxx=(Sxx-Sxx.mean())/Sxx.std()
         norm_Sxx=(Sxx-Sxx.min())/(Sxx.max()-Sxx.min())
@@ -69,7 +69,6 @@ for i in files:
         noise_mask=calculate_mask(norm_Sxx,2.5)
         noise_mask=np.invert(noise_mask)
         print('noise_mask ready')        
-        
         signal=[]
         for j in range(signal_mask.shape[1]):
             if signal_mask[0,j]==1:
@@ -83,33 +82,33 @@ for i in files:
                 noise.append(norm_Sxx[:,j])
         noise=np.array(noise)
         noise=noise.T
-        
-        plt.imshow(10*np.log10(signal),aspect='auto')
+        #if not signal.size>0:
+            #plt.imshow(10*np.log10(signal),aspect='auto')
         
         block_size=int(slice_len/np.diff(time).mean())
         os.makedirs(outputdir+'/signal',exist_ok=True)
-        
-        ind=0
-        while ind+block_size<signal.shape[1]:
-            all_signal.append((signal[:,ind:ind+block_size],y))
-            try:
-                os.remove(outputdir+'/signal/'+y+'_'+i.split('.')[0]+'_'+str(ind))
-            except OSError:
-                pass
-            plt.imsave(outputdir+'/signal/'+y+'_'+i.split('.')[0]+'_'+str(ind),10*np.log10(signal[:,ind:ind+block_size]))
-            ind+=block_size
+        if signal.size>0:
+            ind=0
+            while ind+block_size<signal.shape[1]:
+                all_signal.append((signal[:,ind:ind+block_size],y))
+                try:
+                    os.remove(outputdir+'/signal/'+y+'_'+i.split('.')[0]+'_'+str(ind))
+                except OSError:
+                    pass
+                plt.imsave(outputdir+'/signal/'+y+'_'+i.split('.')[0]+'_'+str(ind),10*np.log10(signal[:,ind:ind+block_size]))
+                ind+=block_size
             
         os.makedirs(outputdir+'/noise',exist_ok=True)
-        
-        ind=0
-        while ind+block_size<noise.shape[1]:
-            all_noise.append((noise[:,ind:ind+block_size],y))
-            try:
-                os.remove(outputdir+'/noise/'+y+'_'+i.split('.')[0]+'_'+str(ind))
-            except OSError:
-                pass
-            plt.imsave(outputdir+'/noise/'+y+'_'+i.split('.')[0]+'_'+str(ind),10*np.log10(noise[:,ind:ind+block_size]))
-            ind+=block_size
+        if noise.size>0:
+            ind=0
+            while ind+block_size<noise.shape[1]:
+                all_noise.append((noise[:,ind:ind+block_size],y))
+                try:
+                    os.remove(outputdir+'/noise/'+y+'_'+i.split('.')[0]+'_'+str(ind))
+                except OSError:
+                    pass
+                plt.imsave(outputdir+'/noise/'+y+'_'+i.split('.')[0]+'_'+str(ind),10*np.log10(noise[:,ind:ind+block_size]))
+                ind+=block_size
             
         """
         D = np.abs(librosa.stft(data))**2
@@ -119,5 +118,10 @@ for i in files:
         #data.append([mfcc,y])"""
     c+=1
     print(c,len(files))
+try:
+    os.remove('all_signal.npy')
+    os.remove('all_noise.npy')
+except OSError:
+    pass
 np.save('all_signal.npy',all_signal)
 np.save('all_noise.npy',all_noise)
