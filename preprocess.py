@@ -2,18 +2,19 @@
 """
 Created on Fri Mar  8 16:59:28 2019
 
-@author: pc
+@author: Shafa at hassan, Abhay Charan, Ankit Kumar
 """
 
 import os
 import numpy as np
 import pandas as pd
 import soundfile as sf
-import scipy.signal as signal
+import scipy.signal as sig
 import matplotlib.pyplot as plt
 import librosa
 import librosa.display
 import scipy
+import imageio
 
 
 def calculate_mask(norm_Sxx,t):
@@ -35,8 +36,12 @@ def calculate_mask(norm_Sxx,t):
 
 metadata=pd.read_csv('birdsong_metadata.csv')
 files=os.listdir('songs')
+sr=22050#new sample rate
+slice_len=3#seconds
+outputdir='processed'
 
-data=[]
+all_signal=[]
+all_noise=[]
 c=0
 for i in files:
     if i.endswith('.flac'):
@@ -44,10 +49,10 @@ for i in files:
         for j in range(len(metadata)):
             if i=='xc'+str(metadata['file_id'][j])+'.flac':
                 y=metadata['species'][j]
-        data_resampled=librosa.core.resample(data,samplerate,22050)
+        data_resampled=librosa.core.resample(data,samplerate,sr)
         print('resampled')
         
-        freq, time, Sxx = signal.spectrogram(data, samplerate,mode='magnitude')
+        freq, time, Sxx = sig.spectrogram(data_resampled, sr,mode='magnitude')
         plt.pcolormesh(time, freq, 10*np.log10(Sxx))
         plt.ylabel('Frequency [Hz]')
         plt.xlabel('Time [sec]')
@@ -79,15 +84,40 @@ for i in files:
         noise=np.array(noise)
         noise=noise.T
         
-        plt.imshow(10*np.log10(norm_Sxx),aspect='auto')
+        plt.imshow(10*np.log10(signal),aspect='auto')
         
+        block_size=int(slice_len/np.diff(time).mean())
+        os.makedirs(outputdir+'/signal',exist_ok=True)
         
+        ind=0
+        while ind+block_size<signal.shape[1]:
+            all_signal.append((signal[:,ind:ind+block_size],y))
+            try:
+                os.remove(outputdir+'/signal/'+y+'_'+i.split('.')[0]+'_'+str(ind))
+            except OSError:
+                pass
+            plt.imsave(outputdir+'/signal/'+y+'_'+i.split('.')[0]+'_'+str(ind),10*np.log10(signal[:,ind:ind+block_size]))
+            ind+=block_size
+            
+        os.makedirs(outputdir+'/noise',exist_ok=True)
+        
+        ind=0
+        while ind+block_size<noise.shape[1]:
+            all_noise.append((noise[:,ind:ind+block_size],y))
+            try:
+                os.remove(outputdir+'/noise/'+y+'_'+i.split('.')[0]+'_'+str(ind))
+            except OSError:
+                pass
+            plt.imsave(outputdir+'/noise/'+y+'_'+i.split('.')[0]+'_'+str(ind),10*np.log10(noise[:,ind:ind+block_size]))
+            ind+=block_size
+            
         """
         D = np.abs(librosa.stft(data))**2
         S = librosa.feature.melspectrogram(S=D)
         librosa.display.specshow(librosa.power_to_db(S,ref=np.max),y_axis='mel', fmax=8000,x_axis='time')
         mfcc=librosa.feature.mfcc(data)
         #data.append([mfcc,y])"""
-        break
     c+=1
     print(c,len(files))
+np.save('all_signal.npy',all_signal)
+np.save('all_noise.npy',all_noise)
