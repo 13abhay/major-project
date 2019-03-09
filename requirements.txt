@@ -1,0 +1,12 @@
+numpy
+pandas
+scipy
+scikit-learn
+nose
+matplotlib
+Pillow
+h5py
+scikit-image
+soundfile
+librosa
+tensorflow
